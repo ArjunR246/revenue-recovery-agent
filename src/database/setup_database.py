@@ -38,7 +38,11 @@ CREATE TABLE IF NOT EXISTS checkouts (
     dropoff_cause TEXT,
 
     recovered INTEGER,
-    time_to_recovery_minutes INTEGER
+    time_to_recovery_minutes INTEGER,
+
+    minutes_since_dropoff INTEGER,
+    recovery_probability_ground_truth REAL,
+    was_recovered INTEGER
 )
 """)
 

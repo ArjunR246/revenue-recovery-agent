@@ -6,3 +6,5 @@ The model was evaluated using 5-fold cross-validation, achieving 97.35% mean acc
 
 We additionally verified there were no duplicate records and no train/test leakage.
 
+Problems: AUC/Brier numbers in your pitch as an honest limitation "here's what didn't fully work and why".
+
