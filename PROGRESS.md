@@ -123,6 +123,78 @@ In Progress
 * Data validation
 
 ---
+## Stage 5: Classifier Validation & Leakage Audit
+
+### Purpose
+
+Validate that the root cause classifier generalizes well beyond a single train/test split and confirm that no data leakage or duplication issues exist in the synthetic dataset.
+
+### Validation 1: Cross-Validation
+
+Performed 5-fold cross-validation using the same feature set and XGBoost classifier.
+
+#### Fold Accuracies
+
+* Fold 1: 0.9745
+* Fold 2: 0.9780
+* Fold 3: 0.9725
+* Fold 4: 0.9740
+* Fold 5: 0.9685
+
+#### Summary
+
+* Mean Accuracy: 0.9735
+* Standard Deviation: 0.0031
+
+#### Interpretation
+
+The model performance is highly stable across folds, with all folds remaining within approximately one percentage point of each other. This indicates that the classifier is learning consistent patterns rather than relying on a favorable train/test split.
+
+### Validation 2: Train/Test Leakage Check
+
+#### Dataset Split
+
+* Training Rows: 8000
+* Testing Rows: 2000
+
+#### Overlap Analysis
+
+* Rows Appearing In Both Train And Test: 0
+* Leakage Percentage: 0.0000%
+
+#### Interpretation
+
+No records were shared between the training and testing sets. The reported accuracy is therefore not inflated by train/test leakage.
+
+### Validation 3: Duplicate Record Audit
+
+#### Dataset Statistics
+
+* Total Rows: 10000
+* Exact Duplicate Rows: 0
+* Duplicate Percentage: 0.00%
+
+#### Interpretation
+
+The synthetic dataset contains no exact duplicate checkout records. Model performance is not being artificially boosted through repeated examples.
+
+### Conclusion
+
+Cross-Validation Stability: PASS
+
+Train/Test Leakage Check: PASS
+
+Duplicate Data Audit: PASS
+
+Model Generalization: PASS
+
+Stage 5 Blockers: NONE
+
+### Decision
+
+The root cause classifier has passed stability, leakage, and duplication validation checks and is approved for progression to Stage 4 implementation work.
+
+---
 
 # Architecture Notes
 
