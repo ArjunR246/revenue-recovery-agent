@@ -8,3 +8,17 @@ We additionally verified there were no duplicate records and no train/test leaka
 
 Problems: AUC/Brier numbers in your pitch as an honest limitation "here's what didn't fully work and why".
 
+    - Main question: Within the same cause, do better behavioral signals correspond to better recovery?
+
+
+PRICE_HESITATION decays far slower (30.8 hr half-life) than OTP_FRICTION and PAYMENT_FAILURE (~9–11 hr half-life), which matches human intuition (someone still thinking about a big purchase stays "gettable" longer than someone who hit a technical snag and moved on)
+
+
+Expected Recovery Value (ERV)
+The routing engine evaluates each possible intervention using:
+ERV = Recoverability Score × Checkout Amount × Cost Adjustment
+Where:
+Recoverability Score = probability of successful recovery from the Stage 5 decay model
+Checkout Amount = potential revenue from the checkout
+Cost Adjustment = estimated effectiveness after accounting for intervention cost
+The action with the highest ERV is selected.

@@ -195,6 +195,140 @@ Stage 5 Blockers: NONE
 The root cause classifier has passed stability, leakage, and duplication validation checks and is approved for progression to Stage 4 implementation work.
 
 ---
+## Stage 6: Recoverability Scoring & Recovery Decay Modeling
+
+### Purpose
+
+Build a recoverability scoring system that predicts the probability of successfully recovering an abandoned checkout and quantifies how recovery likelihood decreases over time.
+
+### Module
+
+`src/recovery/train_recoverability_scorer.py`
+
+### Business Question
+
+Not all abandoned checkouts should receive the same recovery strategy.
+
+This stage estimates:
+
+* Which abandoned checkouts are most likely to recover
+* How recovery probability changes over time
+* Which root causes require faster intervention
+* Which root causes remain recoverable for longer periods
+
+### Dataset
+
+* Total Rows: 10,000
+
+### Overall Recovery Decay
+
+Estimated decay parameters:
+
+* A = 0.2068
+* k = 0.001107
+* C = 0.2533
+
+Half-Life:
+
+* 626.0 minutes
+* 10.4 hours
+
+### Root Cause Recovery Decay
+
+#### DISTRACTION_TIMEOUT
+
+Parameters:
+
+* A = 0.2324
+* k = 0.001017
+* C = 0.2100
+
+Half-Life:
+
+* 681.7 minutes
+* 11.4 hours
+
+Interpretation:
+
+Users who became distracted remain recoverable for a moderate period of time. Recovery effectiveness gradually declines over the first 12 hours.
+
+#### OTP_FRICTION
+
+Parameters:
+
+* A = 0.2424
+* k = 0.001232
+* C = 0.3635
+
+Half-Life:
+
+* 562.7 minutes
+* 9.4 hours
+
+Interpretation:
+
+OTP-related failures have the highest recovery potential but decay relatively quickly. Fast intervention is critical.
+
+#### PAYMENT_FAILURE
+
+Parameters:
+
+* A = 0.1862
+* k = 0.001026
+* C = 0.2977
+
+Half-Life:
+
+* 675.8 minutes
+* 11.3 hours
+
+Interpretation:
+
+Payment failures remain recoverable for a longer period than OTP failures and respond well to alternative payment recovery strategies.
+
+#### PRICE_HESITATION
+
+Parameters:
+
+* A = 0.1292
+* k = 0.000375
+* C = 0.1080
+
+Half-Life:
+
+* 1846.8 minutes
+* 30.8 hours
+
+Interpretation:
+
+Price-sensitive users have the lowest recovery rate but decay slowly. Promotional offers and delayed follow-ups may still be effective.
+
+### Key Findings
+
+1. Recovery probability is strongly time-dependent.
+2. OTP_FRICTION has the highest recovery potential.
+3. PRICE_HESITATION has the lowest recovery probability.
+4. Different root causes require different recovery timing strategies.
+5. Recovery intervention timing should be personalized based on predicted root cause.
+
+### Business Impact
+
+The Revenue Recovery Agent can prioritize outreach based on both:
+
+* Root cause
+* Predicted recoverability
+
+This enables merchants to allocate recovery efforts where the expected revenue return is highest.
+
+### Status
+
+PASS
+
+### Stage 6 Blockers
+
+NONE
+
+---
 
 # Architecture Notes
 
