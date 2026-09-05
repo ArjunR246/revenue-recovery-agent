@@ -173,24 +173,20 @@ roughly the same place per touch.
 
 ## Mistakes I caught along the way (and fixed)
 
-I think this is actually worth including, because catching these felt
-like the real work:
-
 - My root cause classifier first came back at **100% accuracy**, which
-  is a red flag, not a win. Turned out my synthetic data was too clean
-  — I went back and added overlapping feature ranges, some cross-class
+  is a red flag, not a win. Turned out my synthetic data was too clean,
+  I went back and added overlapping feature ranges, some cross-class
   signal bleed, and 3% deliberate label noise, then retrained down to a
   more believable **97.35%** (checked with 5-fold cross-validation —
-  mean 97.35%, std only 0.31% — and confirmed there was no train/test
+  mean 97.35%, std only 0.31% and confirmed there was no train/test
   leakage or duplicate rows).
-- My first version of the recoverability scorer barely beat a naive
-  "just guess the root cause's average recovery rate" baseline. The
+- My first version of the recoverability scorer barely beat a simple baseline. The
   noise I'd added to the generator was drowning out the actual
   behavioral signal (retry count, inactivity, OTP attempts), so I
   dialed it back until those features actually mattered, and verified
   the improvement before moving on.
 - The decay-curve-derived intervention windows initially came out to
-  as long as 5.5 days for PRICE_HESITATION — which directly contradicts
+  as long as 5.5 days for PRICE_HESITATION, which directly contradicts
   the 72-hour hard-expiry rule I'd already committed to elsewhere in the
   system. I capped every decay-derived window at 4,320 minutes so the
   Decision Engine and Stopping Rules module actually agree with each
