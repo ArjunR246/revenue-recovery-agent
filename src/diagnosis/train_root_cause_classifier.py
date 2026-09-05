@@ -106,7 +106,39 @@ model.fit(X_train, y_train)
 # PREDICT
 # ----------------------------------
 
+# ----------------------------------
+# TEST SET PREDICTIONS (for evaluation)
+# ----------------------------------
+
 predictions = model.predict(X_test)
+
+# ==================================
+# SAVE PREDICTIONS FOR ALL ROWS
+# ==================================
+
+all_predictions = model.predict(X)
+
+all_probabilities = model.predict_proba(X)
+
+prediction_df = pd.DataFrame({
+    "checkout_id": df["checkout_id"],
+    "predicted_cause": [
+        reverse_label_map[p]
+        for p in all_predictions
+    ],
+    "prediction_confidence":
+        all_probabilities.max(axis=1)
+})
+
+prediction_df.to_csv(
+    "data/root_cause_predictions.csv",
+    index=False
+)
+
+print(
+    "Saved predictions:",
+    len(prediction_df)
+)
 
 # ----------------------------------
 # EVALUATE

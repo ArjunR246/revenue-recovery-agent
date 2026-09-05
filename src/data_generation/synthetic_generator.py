@@ -356,9 +356,37 @@ for i in range(NUM_ROWS):
 
     # --------------------------------------------------------
     # Time since dropoff
+    # More realistic monitoring distribution
     # --------------------------------------------------------
 
-    minutes_since_dropoff = np.random.randint(5, 4321)
+    time_segment = np.random.choice(
+        ["fresh", "recent", "old"],
+        p=[0.70, 0.20, 0.10]
+    )
+
+    if time_segment == "fresh":
+
+        # 0-6 hours
+        minutes_since_dropoff = np.random.randint(
+            1,
+            361
+        )
+
+    elif time_segment == "recent":
+
+        # 6-24 hours
+        minutes_since_dropoff = np.random.randint(
+            361,
+            1441
+        )
+
+    else:
+
+        # 1-3 days
+        minutes_since_dropoff = np.random.randint(
+            1441,
+            4321
+        )
 
     # --------------------------------------------------------
     # Ground-truth recovery probability
