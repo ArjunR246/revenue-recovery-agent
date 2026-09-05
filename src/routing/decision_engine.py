@@ -2,6 +2,24 @@ import sqlite3
 import pandas as pd
 import numpy as np
 
+stops = pd.read_csv(
+    "data/stopping_rule_results.csv"
+)
+
+stop_lookup = dict(
+    zip(
+        stops["checkout_id"],
+        stops["decision"]
+    )
+)
+
+reason_lookup = dict(
+    zip(
+        stops["checkout_id"],
+        stops["stop_reason"]
+    )
+)
+
 # ============================================================
 # DECAY PARAMETERS FROM STAGE 5B
 # ============================================================
@@ -11,25 +29,25 @@ DECAY_PARAMS = {
         "A": 0.2424,
         "k": 0.001232,
         "C": 0.3635,
-        "window_minutes": 360
+        "window_minutes": 2432
     },
     "PAYMENT_FAILURE": {
         "A": 0.1862,
         "k": 0.001026,
         "C": 0.2977,
-        "window_minutes": 360
+        "window_minutes": 2920
     },
     "DISTRACTION_TIMEOUT": {
         "A": 0.2324,
         "k": 0.001017,
         "C": 0.2100,
-        "window_minutes": 120
+        "window_minutes": 2946
     },
     "PRICE_HESITATION": {
         "A": 0.1292,
         "k": 0.000375,
         "C": 0.1080,
-        "window_minutes": 1440
+        "window_minutes": 4320
     }
 }
 
@@ -41,8 +59,8 @@ ACTION_COSTS = {
     "RETRY_LINK": 0.98,
     "PAYMENT_METHOD_SWITCH": 0.95,
     "NUDGE": 0.92,
-    "DISCOUNT_OFFER": 0.90,
-    "HUMAN_ESCALATION": 0.75,
+    "DISCOUNT_OFFER": 0.85,
+    "HUMAN_ESCALATION": 0.80,
     "STOP": 0.00
 }
 
@@ -89,9 +107,30 @@ df = pd.read_sql(
 
 conn.close()
 
+# ==========================================
+# LOAD CLASSIFIER PREDICTIONS
+# ==========================================
+
+predictions = pd.read_csv(
+    "data/root_cause_predictions.csv"
+)
+
+print(
+    f"Prediction rows: {len(predictions)}"
+)
+
+df = df.merge(
+    predictions,
+    on="checkout_id",
+    how="left"
+)
+
 print(
     f"Rows loaded: {len(df)}"
 )
+
+print("\nColumns:")
+print(df.columns.tolist())
 
 # ============================================================
 # RECOVERABILITY CURVE
@@ -138,8 +177,26 @@ def calculate_erv(
 # ============================================================
 
 def choose_action(row):
+    if stop_lookup.get(
+        row["checkout_id"]
+    ) == "STOP":
 
-    cause = row["dropoff_cause"]
+        return pd.Series({
+            "chosen_action": "STOP",
+            "ERV_score": 0,
+
+            "prediction_confidence":
+            round(
+                row["prediction_confidence"],
+                4
+            ),
+
+            "explanation":
+            f"Stopped by rule: "
+            f"{reason_lookup[row['checkout_id']]}"
+        })
+
+    cause = row["predicted_cause"]
 
     amount = row["amount"]
 
@@ -158,6 +215,13 @@ def choose_action(row):
         return pd.Series({
             "chosen_action": "STOP",
             "ERV_score": 0,
+
+            "prediction_confidence":
+            round(
+                row["prediction_confidence"],
+                4
+            ),
+
             "explanation":
             (
                 f"STOP chosen: "
@@ -179,17 +243,25 @@ def choose_action(row):
     ervs = {}
 
     for action in candidate_actions:
+        if action == "DISCOUNT_OFFER":
 
+            if amount < 7000:
+                continue
+
+            if recoverability < 0.20:
+                continue
         # -------------------------
         # escalation only for
         # large carts
         # -------------------------
 
-        if (
-            action == "HUMAN_ESCALATION"
-            and amount < 10000
-        ):
-            continue
+        if action == "HUMAN_ESCALATION":
+
+            if amount < 8000:
+                continue
+
+            if recoverability < 0.25:
+                continue
 
         # -------------------------
         # retry link only after
@@ -202,19 +274,54 @@ def choose_action(row):
         ):
             continue
 
-        ervs[action] = (
-            calculate_erv(
-                recoverability,
-                amount,
-                action
-            )
+        erv = calculate_erv(
+            recoverability,
+            amount,
+            action
         )
+
+        # --------------------------------
+        # action effectiveness bonus
+        # --------------------------------
+
+        if (
+            cause == "OTP_FRICTION"
+            and action == "RETRY_LINK"
+        ):
+            erv *= 1.15
+
+        elif (
+            cause == "PAYMENT_FAILURE"
+            and action == "PAYMENT_METHOD_SWITCH"
+        ):
+            erv *= 1.20
+
+        elif (
+            cause == "PRICE_HESITATION"
+            and action == "DISCOUNT_OFFER"
+        ):
+            erv *= 1.25
+
+        elif (
+            cause == "DISTRACTION_TIMEOUT"
+            and action == "NUDGE"
+        ):
+            erv *= 1.15
+
+        ervs[action] = erv
 
     if len(ervs) == 0:
 
         return pd.Series({
             "chosen_action": "STOP",
             "ERV_score": 0,
+
+            "prediction_confidence":
+            round(
+                row["prediction_confidence"],
+                4
+            ),
+
             "explanation":
             "No viable intervention"
         })
@@ -228,20 +335,31 @@ def choose_action(row):
         best_action
     ]
 
+    confidence = row["prediction_confidence"]
+
     explanation = (
-        f"{best_action} chosen: "
-        f"recoverability="
-        f"{recoverability:.3f}, "
-        f"time={minutes}min, "
-        f"amount=₹{amount:.0f}, "
+        f"{best_action} chosen | "
+        f"cause={cause} | "
+        f"confidence={confidence:.3f} | "
+        f"recoverability={recoverability:.3f} | "
+        f"time={minutes}min | "
+        f"amount=₹{amount:.0f} | "
         f"ERV=₹{best_erv:.0f}"
     )
 
     return pd.Series({
         "chosen_action":
         best_action,
+
         "ERV_score":
         round(best_erv, 2),
+
+        "prediction_confidence":
+        round(
+            row["prediction_confidence"],
+            4
+        ),
+
         "explanation":
         explanation
     })
@@ -260,6 +378,18 @@ df = pd.concat(
         df,
         routing_output
     ],
+    axis=1
+)
+
+# ============================================================
+# RECOVERABILITY SCORE
+# ============================================================
+
+df["recoverability_score"] = df.apply(
+    lambda row: recoverability_at_time(
+        row["predicted_cause"],
+        row["minutes_since_dropoff"]
+    ),
     axis=1
 )
 
