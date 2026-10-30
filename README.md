@@ -4,7 +4,7 @@
 An AI agent that looks at an abandoned checkout, figures out *why* it was
 abandoned, estimates *how likely* it still is to be recovered, models how
 that likelihood fades over time, and then decides whether it's even worth
-intervening — and if so, how. Every decision comes with a reason attached,
+intervening and if so, how. Every decision comes with a reason attached,
 and the agent knows when to stop trying.
 
 ---
